@@ -1,0 +1,135 @@
+# Review Agent Docker Compose 配置
+version: "3.9"
+
+services:
+  # Django Web 应用
+  review-django:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.django
+    container_name: review-agent-django
+    environment:
+      REVIEW_AGENT_ENV: ${ENV:-production}
+      REVIEW_AGENT_DATABASE_HOST: ${POSTGRES_HOST:-10.20.4.11}
+      REVIEW_AGENT_DATABASE_NAME: ${POSTGRES_DB:-review_agent}
+      REVIEW_AGENT_DATABASE_USER: ${POSTGRES_USER:-avatar}
+      REVIEW_AGENT_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-YY5VV5}
+      REVIEW_AGENT_REDIS_HOST: redis
+      REVIEW_AGENT_REDIS_PORT: 6379
+      REVIEW_AGENT_SECRET_KEY: ${SECRET_KEY}
+      REVIEW_AGENT_GITLAB_URL: ${GITLAB_URL:-https://gitlab.com}
+      REVIEW_AGENT_GITLAB_ACCESS_TOKEN: ${GITLAB_ACCESS_TOKEN}
+      REVIEW_AGENT_AI_MODEL: ${AI_MODEL:-gpt-4o}
+      REVIEW_AGENT_AI_API_KEY: ${AI_API_KEY}
+    volumes:
+      - ../backend:/app
+    ports:
+      - "7000:7000"
+    command: >
+      sh -c "
+        python manage.py migrate --noinput &&
+        python manage.py init_admin &&
+        python manage.py collectstatic --noinput &&
+        gunicorn config.wsgi:application
+          --bind 0.0.0.0:7000
+          --workers 4
+          --timeout 120
+          --access-logfile -
+          --error-logfile -
+          --log-level info
+      "
+    networks:
+      - review-agent-network
+
+  # FastAPI 应用
+  review-fastapi:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.fastapi
+    container_name: review-agent-fastapi
+    environment:
+      REVIEW_AGENT_ENV: ${ENV:-production}
+      REVIEW_AGENT_DATABASE_HOST: postgres
+      REVIEW_AGENT_DATABASE_NAME: ${POSTGRES_DB:-review_agent}
+      REVIEW_AGENT_DATABASE_USER: ${POSTGRES_USER:-review_agent}
+      REVIEW_AGENT_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-review_agent_password}
+      REVIEW_AGENT_REDIS_HOST: redis
+      REVIEW_AGENT_REDIS_PORT: 6379
+      REVIEW_AGENT_GITLAB_URL: ${GITLAB_URL:-https://gitlab.com}
+      REVIEW_AGENT_GITLAB_ACCESS_TOKEN: ${GITLAB_ACCESS_TOKEN}
+      REVIEW_AGENT_AI_MODEL: ${AI_MODEL:-gpt-4o}
+      REVIEW_AGENT_AI_API_KEY: ${AI_API_KEY}
+    volumes:
+      - ../backend:/app
+    ports:
+      - "7001:7001"
+    command: >
+      sh -c "
+        uvicorn api.main:app
+          --host 0.0.0.0
+          --port 7001
+          --workers 2
+          --loop uvloop
+          --log-level info
+      "
+    networks:
+      - review-agent-network
+
+  # Celery Worker
+  celery_worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.fastapi
+    container_name: review-agent-celery-worker
+    environment:
+      REVIEW_AGENT_ENV: ${ENV:-production}
+      REVIEW_AGENT_DATABASE_HOST: postgres
+      REVIEW_AGENT_DATABASE_NAME: ${POSTGRES_DB:-review_agent}
+      REVIEW_AGENT_DATABASE_USER: ${POSTGRES_USER:-review_agent}
+      REVIEW_AGENT_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-review_agent_password}
+      REVIEW_AGENT_REDIS_HOST: redis
+      REVIEW_AGENT_REDIS_PORT: 6379
+      REVIEW_AGENT_GITLAB_URL: ${GITLAB_URL:-https://gitlab.com}
+      REVIEW_AGENT_GITLAB_ACCESS_TOKEN: ${GITLAB_ACCESS_TOKEN}
+      REVIEW_AGENT_AI_MODEL: ${AI_MODEL:-gpt-4o}
+      REVIEW_AGENT_AI_API_KEY: ${AI_API_KEY}
+    volumes:
+      - ../backend:/app
+    command: >
+      celery -A integration.tasks worker
+        --loglevel=info
+        --concurrency=4
+        --max-tasks-per-child=100
+    networks:
+      - review-agent-network
+
+  # Celery Beat (定时任务)
+  celery_beat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.fastapi
+    container_name: review-agent-celery-beat
+    environment:
+      REVIEW_AGENT_ENV: ${ENV:-production}
+      REVIEW_AGENT_DATABASE_HOST: postgres
+      REVIEW_AGENT_DATABASE_NAME: ${POSTGRES_DB:-review_agent}
+      REVIEW_AGENT_DATABASE_USER: ${POSTGRES_USER:-review_agent}
+      REVIEW_AGENT_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-review_agent_password}
+      REVIEW_AGENT_REDIS_HOST: redis
+      REVIEW_AGENT_REDIS_PORT: 6379
+    volumes:
+      - ../backend:/app
+    command: >
+      celery -A integration.tasks beat
+        --loglevel=info
+        --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    networks:
+      - review-agent-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  review-agent-network:
+    driver: bridge

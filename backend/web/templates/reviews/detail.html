@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}审查任务 {{ task.task_id|slice:":8" }} - {% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <div class="mb-2">
+            <a href="{% url 'web:review_list' %}" class="text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i>审查任务列表
+            </a>
+        </div>
+        <h1>审查任务详情</h1>
+    </div>
+    <div>
+        {% if task.status == 'pending' or task.status == 'running' %}
+        <form method="post" action="{% url 'web:review_cancel' task.task_id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" onclick="return confirm('确定要取消此任务吗？')">
+                <i class="bi bi-x-circle me-1"></i>取消任务
+            </button>
+        </form>
+        {% endif %}
+        {% if task.status == 'completed' and task.pull_request.project %}
+        <a href="{{ task.pull_request.url }}" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right me-1"></i>在 GitLab 查看
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 任务信息卡片 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">任务信息</div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <th class="col-4">任务 ID</th>
+                        <td><code>{{ task.task_id }}</code></td>
+                    </tr>
+                    <tr>
+                        <th>类型</th>
+                        <td><span class="badge bg-secondary">{{ task.get_review_type_display }}</span></td>
+                    </tr>
+                    <tr>
+                        <th>状态</th>
+                        <td>
+                            <span class="badge badge-status-{{ task.status }}">
+                                {{ task.get_status_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>触发方式</th>
+                        <td>{{ task.triggered_by }}</td>
+                    </tr>
+                    <tr>
+                        <th>创建时间</th>
+                        <td>{{ task.created_at|date:"Y-m-d H:i:s" }}</td>
+                    </tr>
+                    <tr>
+                        <th>更新时间</th>
+                        <td>{{ task.updated_at|date:"Y-m-d H:i:s" }}</td>
+                    </tr>
+                    <tr>
+                        <th>耗时</th>
+                        <td>
+                            {% if task.duration_seconds %}
+                                {{ task.duration_seconds }}秒
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>AI 模型</th>
+                        <td><code>{{ task.ai_model|default:"默认" }}</code></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">关联 MR</div>
+            <div class="card-body">
+                {% if task.pull_request %}
+                <table class="table table-borderless">
+                    <tr>
+                        <th class="col-4">项目</th>
+                        <td>
+                            <a href="{% url 'web:project_detail' task.pull_request.project.path_with_namespace %}" class="text-decoration-none">
+                                {{ task.pull_request.project.name }}
+                            </a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>MR</th>
+                        <td>
+                            <a href="{% url 'web:mr_detail' task.pull_request.project.path_with_namespace task.pull_request.mr_iid %}" class="text-decoration-none">
+                                !{{ task.pull_request.mr_iid }}
+                            </a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>标题</th>
+                        <td>{{ task.pull_request.title }}</td>
+                    </tr>
+                    <tr>
+                        <th>分支</th>
+                        <td>
+                            <span class="badge bg-secondary">{{ task.pull_request.source_branch }}</span>
+                            →
+                            <span class="badge bg-secondary">{{ task.pull_request.target_branch }}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>作者</th>
+                        <td>{{ task.pull_request.author.gitlab_username|default:"N/A" }}</td>
+                    </tr>
+                </table>
+                {% else %}
+                <p class="text-muted mb-0">无关联 MR</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 错误信息 -->
+{% if task.status == 'failed' and task.error_message %}
+<div class="alert alert-danger" role="alert">
+    <strong>错误信息：</strong>
+    <pre class="mb-0 mt-2">{{ task.error_message }}</pre>
+</div>
+{% endif %}
+
+<!-- 审查结果 -->
+{% if task.result %}
+<div class="card">
+    <div class="card-header">审查结果</div>
+    <div class="card-body">
+        {% if task.review_type == 'review' %}
+            <!-- 代码审查结果 -->
+            {% if task.result.summary %}
+            <div class="mb-4">
+                <h5>总结</h5>
+                <div class="border rounded p-3 bg-light">
+                    {{ task.result.summary|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if task.result.review_comments %}
+            <div class="mb-4">
+                <h5>审查评论</h5>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>文件</th>
+                                <th>行号</th>
+                                <th>内容</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for comment in task.result.review_comments %}
+                            <tr>
+                                <td><code>{{ comment.file_name }}</code></td>
+                                <td>{{ comment.line_number }}</td>
+                                <td>{{ comment.body|linebreaks }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if task.result.suggestions %}
+            <div>
+                <h5>改进建议</h5>
+                <ul class="list-group">
+                    {% for suggestion in task.result.suggestions %}
+                    <li class="list-group-item">{{ suggestion }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+        {% elif task.review_type == 'describe' %}
+            <!-- PR 描述生成结果 -->
+            {% if task.result.description %}
+            <div>
+                <h5>生成的描述</h5>
+                <div class="border rounded p-3 bg-light">
+                    {{ task.result.description|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+
+        {% elif task.review_type == 'improve' %}
+            <!-- 代码改进建议结果 -->
+            {% if task.result.improvements %}
+            <div>
+                <h5>改进建议</h5>
+                <div class="accordion" id="improvementsAccordion">
+                    {% for improvement in task.result.improvements %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#improve{{ forloop.counter }}">
+                                {{ improvement.title|default:"改进 #"|add:forloop.counter }}
+                            </button>
+                        </h2>
+                        <div id="improve{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#improvementsAccordion">
+                            <div class="accordion-body">
+                                {% if improvement.file %}
+                                <p><strong>文件：</strong><code>{{ improvement.file }}</code></p>
+                                {% endif %}
+                                {% if improvement.suggestion %}
+                                <p><strong>建议：</strong>{{ improvement.suggestion|linebreaks }}</p>
+                                {% endif %}
+                                {% if improvement.code %}
+                                <pre><code>{{ improvement.code }}</code></pre>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        {% elif task.review_type == 'question' %}
+            <!-- 问答结果 -->
+            {% if task.result.answer %}
+            <div>
+                <h5>回答</h5>
+                <div class="border rounded p-3 bg-light">
+                    {{ task.result.answer|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info" role="alert">
+    <i class="bi bi-info-circle me-2"></i>
+    任务正在处理中，结果将在完成后显示。
+</div>
+{% endif %}
+
+<!-- 相关评论 -->
+{% if comments %}
+<div class="card mt-4">
+    <div class="card-header">评论记录</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>文件</th>
+                        <th>行号</th>
+                        <th>内容</th>
+                        <th>创建时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for comment in comments %}
+                    <tr>
+                        <td><code>{{ comment.file_path }}</code></td>
+                        <td>{{ comment.line_number }}</td>
+                        <td>{{ comment.body|linebreaks }}</td>
+                        <td>{{ comment.created_at|date:"m-d H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

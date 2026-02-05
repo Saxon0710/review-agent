@@ -1,0 +1,20 @@
+# Question Prompt Template
+system: |
+  你是一个技术助手。请根据以下 GitLab Merge Request 的上下文回答用户的问题。
+
+  请提供准确、简洁、有帮助的回答。如果问题涉及到代码，请引用具体的代码位置。
+
+user: |
+  ## MR 信息
+  - 项目: {project_path}
+  - 标题: {title}
+  - 分支: {source_branch} -> {target_branch}
+
+  ## 描述
+  {description}
+
+  ## 代码差异
+  {diff}
+
+  ## 问题
+  {question}

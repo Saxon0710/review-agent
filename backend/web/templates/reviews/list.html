@@ -1,0 +1,489 @@
+{% extends "base.html" %}
+
+{% block title %}审查任务 - {% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container { position: relative; height: 250px; }
+    .mini-stat {
+        text-align: center;
+        padding: 1rem;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+    }
+    .mini-stat .value { font-size: 1.75rem; font-weight: bold; }
+    .mini-stat .label { font-size: 0.75rem; opacity: 0.9; }
+    .mini-stat.bg-success { background: linear-gradient(135deg, var(--success-color), #55efc4); }
+    .mini-stat.bg-danger { background: linear-gradient(135deg, var(--danger-color), #ff7675); }
+    .mini-stat.bg-warning { background: linear-gradient(135deg, var(--warning-color), #ffeaa7); }
+    .mini-stat.bg-info { background: linear-gradient(135deg, var(--info-color), #74b9ff); }
+    .filter-collapse { cursor: pointer; }
+    .filter-collapse .bi-chevron-down { transition: transform 0.2s; }
+    .filter-collapse.collapsed .bi-chevron-down { transform: rotate(-90deg); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">📋 审查任务</h1>
+        <p class="text-muted mb-0">管理和查看所有代码审查任务</p>
+    </div>
+    <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+        <i class="bi bi-arrow-clockwise me-1"></i>刷新
+    </button>
+</div>
+
+<!-- 筛选器 -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center" onclick="toggleFilters()" style="cursor: pointer;">
+        <span><i class="bi bi-funnel me-2"></i>筛选条件</span>
+        <i class="bi bi-chevron-down" id="filterIcon"></i>
+    </div>
+    <div class="card-body" id="filterBody">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">项目</label>
+                <select name="project" class="form-select">
+                    <option value="">全部</option>
+                    {% for p in projects %}
+                    <option value="{{ p.id }}" {% if filters.project == p.id|stringformat:"s" %}selected{% endif %}>
+                        {{ p.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">项目名称</label>
+                <input type="text" name="project_name" class="form-control" placeholder="搜索项目名称" value="{{ filters.project_name }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">类型</label>
+                <select name="type" class="form-select">
+                    <option value="">全部</option>
+                    <option value="review" {% if filters.type == 'review' %}selected{% endif %}>代码审查</option>
+                    <option value="describe" {% if filters.type == 'describe' %}selected{% endif %}>描述生成</option>
+                    <option value="improve" {% if filters.type == 'improve' %}selected{% endif %}>改进建议</option>
+                    <option value="question" {% if filters.type == 'question' %}selected{% endif %}>问答</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">状态</label>
+                <select name="status" class="form-select">
+                    <option value="">全部</option>
+                    <option value="pending" {% if filters.status == 'pending' %}selected{% endif %}>等待中</option>
+                    <option value="running" {% if filters.status == 'running' %}selected{% endif %}>执行中</option>
+                    <option value="completed" {% if filters.status == 'completed' %}selected{% endif %}>已完成</option>
+                    <option value="failed" {% if filters.status == 'failed' %}selected{% endif %}>失败</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">触发方式</label>
+                <select name="trigger" class="form-select">
+                    <option value="">全部</option>
+                    <option value="webhook" {% if filters.trigger == 'webhook' %}selected{% endif %}>Webhook</option>
+                    <option value="manual" {% if filters.trigger == 'manual' %}selected{% endif %}>手动</option>
+                    <option value="command" {% if filters.trigger == 'command' %}selected{% endif %}>命令</option>
+                    <option value="push" {% if filters.trigger == 'push' %}selected{% endif %}>Push</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">开发者</label>
+                <input type="text" name="developer" class="form-control" placeholder="用户名/邮箱" value="{{ filters.developer }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">开始日期</label>
+                <input type="date" name="date_from" class="form-control" value="{{ filters.date_from }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">结束日期</label>
+                <input type="date" name="date_to" class="form-control" value="{{ filters.date_to }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">筛选</button>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <a href="{% url 'web:review_list' %}" class="btn btn-outline-secondary w-100">重置</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 统计概览 + 图表 -->
+<div class="row mb-4">
+    <!-- 迷你统计卡片 -->
+    <div class="col-lg-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-bar-chart me-2"></i>统计概览
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    <div class="col-3">
+                        <div class="mini-stat mb-0">
+                            <div class="value">{{ stats.total }}</div>
+                            <div class="label">总数</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="mini-stat bg-warning mb-0">
+                            <div class="value">{{ stats.pending }}</div>
+                            <div class="label">等待中</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="mini-stat bg-info mb-0">
+                            <div class="value">{{ stats.running }}</div>
+                            <div class="label">执行中</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="mini-stat bg-success mb-0">
+                            <div class="value">{{ stats.completed }}</div>
+                            <div class="label">已完成</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="reviewTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 类型分布 + 触发方式 -->
+    <div class="col-lg-4 mb-4">
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header py-2">
+                        <i class="bi bi-pie-chart me-2"></i>审查类型
+                    </div>
+                    <div class="card-body">
+                        <div style="height: 150px;">
+                            <canvas id="reviewTypeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header py-2">
+                        <i class="bi bi-lightning me-2"></i>触发方式
+                    </div>
+                    <div class="card-body">
+                        <div style="height: 150px;">
+                            <canvas id="reviewTriggerChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 任务列表 -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>任务列表 ({{ stats.total }} 条)</span>
+        <div class="small text-muted">
+            平均耗时: <strong>{% if stats.avg_duration %}{{ stats.avg_duration|floatformat:1 }}秒{% else %}-{% endif %}</strong>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if tasks %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>任务 ID</th>
+                        <th>类型</th>
+                        <th>项目</th>
+                        <th>开发者</th>
+                        <th>MR</th>
+                        <th>触发方式</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                        <th>耗时</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr>
+                        <td><code class="small">{{ task.task_id|slice:":8" }}</code></td>
+                        <td><span class="badge bg-secondary">{{ task.get_review_type_display }}</span></td>
+                        <td>{{ task.pull_request.project.name }}</td>
+                        <td>
+                            {% if task.pull_request.author %}
+                                <span class="badge bg-light text-dark">{{ task.pull_request.author.gitlab_username }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'web:mr_detail' task.pull_request.project.path_with_namespace task.pull_request.mr_iid %}" class="text-decoration-none">
+                                !{{ task.pull_request.mr_iid }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ task.triggered_by }}</span>
+                        </td>
+                        <td><span class="badge badge-status-{{ task.status }}">{{ task.get_status_display }}</span></td>
+                        <td class="text-muted">{{ task.created_at|date:"m-d H:i" }}</td>
+                        <td>
+                            {% if task.duration_seconds %}
+                                <span class="text-success">{{ task.duration_seconds }}s</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'web:review_detail' task.task_id %}" class="btn btn-sm btn-outline-primary">
+                                详情
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+        <nav aria-label="Page navigation" class="mt-3">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number %}">上一页</a>
+                    </li>
+                {% endif %}
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number %}">下一页</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="text-center py-5">
+            <p class="text-muted mb-3">暂无审查任务</p>
+            <a href="{% url 'web:project_list' %}" class="btn btn-primary">查看项目</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// 切换筛选器展开/收起
+function toggleFilters() {
+    const body = document.getElementById('filterBody');
+    const icon = document.getElementById('filterIcon');
+    body.classList.toggle('show');
+    icon.classList.toggle('collapsed');
+}
+
+// 图表颜色
+const colors = {
+    primary: '#6c5ce7',
+    success: '#00b894',
+    danger: '#d63031',
+    warning: '#fdcb6e',
+    info: '#0984e3',
+    purple: '#a29bfe'
+};
+
+// 获取当前筛选参数
+function getFilterParams() {
+    const params = new URLSearchParams();
+    const project = document.querySelector('select[name="project"]').value;
+    const projectName = document.querySelector('input[name="project_name"]').value;
+    const type = document.querySelector('select[name="type"]').value;
+    const status = document.querySelector('select[name="status"]').value;
+    const trigger = document.querySelector('select[name="trigger"]').value;
+    const developer = document.querySelector('input[name="developer"]').value;
+    const dateFrom = document.querySelector('input[name="date_from"]').value;
+    const dateTo = document.querySelector('input[name="date_to"]').value;
+
+    if (project) params.append('project', project);
+    if (projectName) params.append('project_name', projectName);
+    if (type) params.append('type', type);
+    if (status) params.append('status', status);
+    if (trigger) params.append('trigger', trigger);
+    if (developer) params.append('developer', developer);
+    if (dateFrom) params.append('date_from', dateFrom);
+    if (dateTo) params.append('date_to', dateTo);
+
+    return params.toString();
+}
+
+// 审查趋势图
+async function initReviewTrendChart() {
+    const ctx = document.getElementById('reviewTrendChart');
+    if (!ctx) return;
+
+    try {
+        const params = getFilterParams();
+        const response = await fetch(`{% url 'web:review_list_stats_api' %}?${params}`);
+        const data = await response.json();
+
+        const labels = data.trends.map(t => t.date);
+        const totalData = data.trends.map(t => t.total);
+        const completedData = data.trends.map(t => t.completed);
+        const failedData = data.trends.map(t => t.failed);
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '总数',
+                        data: totalData,
+                        borderColor: colors.primary,
+                        backgroundColor: colors.primary + '20',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: '完成',
+                        data: completedData,
+                        borderColor: colors.success,
+                        backgroundColor: colors.success + '20',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: '失败',
+                        data: failedData,
+                        borderColor: colors.danger,
+                        backgroundColor: colors.danger + '20',
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12 } }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Failed to load chart data:', e);
+    }
+}
+
+// 审查类型分布
+async function initReviewTypeChart() {
+    const ctx = document.getElementById('reviewTypeChart');
+    if (!ctx) return;
+
+    try {
+        const params = getFilterParams();
+        const response = await fetch(`{% url 'web:review_list_stats_api' %}?${params}`);
+        const data = await response.json();
+
+        const labels = {
+            'review': '审查',
+            'describe': '描述',
+            'improve': '改进',
+            'question': '问答',
+            'update_changelog': '日志',
+            'generate_labels': '标签'
+        };
+
+        const chartData = data.by_type.map(item => ({
+            label: labels[item.review_type] || item.review_type,
+            value: item.total
+        }));
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: chartData.map(d => d.label),
+                datasets: [{
+                    data: chartData.map(d => d.value),
+                    backgroundColor: [colors.primary, colors.success, colors.info, colors.warning, colors.purple, colors.danger],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Failed to load type chart:', e);
+    }
+}
+
+// 触发方式分布
+async function initReviewTriggerChart() {
+    const ctx = document.getElementById('reviewTriggerChart');
+    if (!ctx) return;
+
+    try {
+        const params = getFilterParams();
+        const response = await fetch(`{% url 'web:review_list_stats_api' %}?${params}`);
+        const data = await response.json();
+
+        const labels = {
+            'webhook': 'Webhook',
+            'manual': '手动',
+            'command': '命令',
+            'push': 'Push',
+            'api': 'API'
+        };
+
+        const chartData = data.by_trigger.map(item => ({
+            label: labels[item.triggered_by] || item.triggered_by,
+            value: item.total
+        }));
+
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: chartData.map(d => d.label),
+                datasets: [{
+                    data: chartData.map(d => d.value),
+                    backgroundColor: [colors.primary, colors.success, colors.info, colors.warning, colors.purple],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Failed to load trigger chart:', e);
+    }
+}
+
+// 初始化
+document.addEventListener('DOMContentLoaded', function() {
+    initReviewTrendChart();
+    initReviewTypeChart();
+    initReviewTriggerChart();
+});
+</script>
+{% endblock %}

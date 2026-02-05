@@ -1,0 +1,722 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - {% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container { position: relative; height: 250px; }
+    .chart-container-sm { position: relative; height: 200px; }
+    .stat-card { padding: 1rem; }
+    .stat-value { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); }
+    .stat-label { color: #636e72; font-size: 0.875rem; }
+    .score-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 1.25rem;
+    }
+    .score-excellent { background: linear-gradient(135deg, #00b894, #55efc4); color: white; }
+    .score-good { background: linear-gradient(135deg, #0984e3, #74b9ff); color: white; }
+    .score-fair { background: linear-gradient(135deg, #fdcb6e, #ffeaa7); color: #333; }
+    .score-poor { background: linear-gradient(135deg, #d63031, #ff7675); color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">{{ project.name }}</h1>
+        <p class="text-muted mb-0"><code>{{ project.path_with_namespace }}</code></p>
+    </div>
+    <div>
+        <a href="{{ project.url }}" target="_blank" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right me-1"></i>GitLab
+        </a>
+        <a href="{% url 'web:project_sync' project.id %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-clockwise me-1"></i>同步
+        </a>
+    </div>
+</div>
+
+<!-- 筛选器 -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small mb-1">开发者筛选</label>
+                <input type="text" name="developer" class="form-control form-control-sm" placeholder="用户名/邮箱" value="{{ filters.developer }}">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">筛选</button>
+            </div>
+            <div class="col-md-2">
+                <a href="{% url 'web:project_detail' project.path_with_namespace %}" class="btn btn-outline-secondary btn-sm w-100">重置</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 统计概览 + 图表 -->
+<div class="row mb-4">
+    <!-- 统计卡片 -->
+    <div class="col-lg-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-graph-up me-2"></i>项目活动趋势 (最近30天)
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    <div class="col-3">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ stats.mr.total }}</div>
+                            <div class="stat-label">MR 总数</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="stat-card">
+                            <div class="stat-value text-success">{{ stats.mr.opened }}</div>
+                            <div class="stat-label">开启中</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="stat-card">
+                            <div class="stat-value text-primary">{{ stats.mr.merged }}</div>
+                            <div class="stat-label">已合并</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="stat-card">
+                            <div class="stat-value text-info">{{ stats.review.completed }}</div>
+                            <div class="stat-label">已审查</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="projectTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MR 状态分布 -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="bi bi-pie-chart me-2"></i>MR 状态分布
+            </div>
+            <div class="card-body">
+                <div class="chart-container-sm">
+                    <canvas id="mrStatusChart"></canvas>
+                </div>
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">合并率</span>
+                        <strong>{% widthratio stats.mr.merged stats.mr.total 100 as merge_rate %}{{ merge_rate|floatformat:1 }}%</strong>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success" style="width: {{ merge_rate }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 项目统计图表 -->
+<div class="row mb-4">
+    <!-- 项目提交统计 -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-calendar3 me-2"></i>项目提交统计 (最近12个月)
+            </div>
+            <div class="card-body">
+                <div class="chart-container-sm">
+                    <canvas id="submissionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 项目平均得分 -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-star me-2"></i>项目平均得分</span>
+                {% if avg_scores.avg_score %}
+                    <span class="score-badge {% if avg_scores.avg_score >= 8 %}score-excellent{% elif avg_scores.avg_score >= 6 %}score-good{% elif avg_scores.avg_score >= 4 %}score-fair{% else %}score-poor{% endif %}">
+                        {{ avg_scores.avg_score|floatformat:1 }}
+                    </span>
+                {% else %}
+                    <span class="text-muted">暂无数据</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="chart-container-sm">
+                    <canvas id="scoreChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 开发者统计图表 -->
+<div class="row mb-4">
+    <!-- 开发者提交统计 -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-people me-2"></i>开发者提交统计 (Top 15)
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="developerSubmissionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 开发者平均得分 -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-trophy me-2"></i>开发者平均得分 (Top 15)
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="developerScoreChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 标签页 -->
+<ul class="nav nav-tabs mb-4" id="projectTab" role="tablist">
+    <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#mrs-tab" type="button">
+            <i class="bi bi-git-pull-request me-1"></i>合并请求
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tasks-tab" type="button">
+            <i class="bi bi-file-earmark-check me-1"></i>审查任务
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#config-tab" type="button">
+            <i class="bi bi-gear me-1"></i>配置
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <!-- MR 列表 -->
+    <div class="tab-pane fade show active" id="mrs-tab" role="tabpanel">
+        <div class="card">
+            <div class="card-body">
+                {% if merge_requests %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>IID</th>
+                                <th>标题</th>
+                                <th>作者</th>
+                                <th>分支</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mr in merge_requests %}
+                            <tr>
+                                <td><a href="{{ mr.url }}" target="_blank" class="text-decoration-none">!{{ mr.mr_iid }}</a></td>
+                                <td>
+                                    <a href="{% url 'web:mr_detail' project.path_with_namespace mr.mr_iid %}" class="text-decoration-none">
+                                        {{ mr.title|truncatechars:60 }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark">{{ mr.author.gitlab_username|default:"N/A" }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ mr.source_branch }}</span>
+                                    <i class="bi bi-arrow-right mx-1 text-muted"></i>
+                                    <span class="badge bg-secondary">{{ mr.target_branch }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge {% if mr.state == 'opened' %}bg-success{% elif mr.state == 'merged' %}bg-primary{% elif mr.state == 'closed' %}bg-secondary{% else %}bg-warning{% endif %}">
+                                        {{ mr.get_state_display }}
+                                    </span>
+                                    {% if mr.draft %}
+                                        <span class="badge bg-warning ms-1">草稿</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted">{{ mr.gitlab_created_at|date:"m-d H:i" }}</td>
+                                <td>
+                                    <a href="{% url 'web:mr_detail' project.path_with_namespace mr.mr_iid %}" class="btn btn-sm btn-outline-primary">
+                                        详情
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <p class="text-muted mb-3">暂无 MR</p>
+                    <a href="{{ project.url }}" target="_blank" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>创建第一个 MR
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 审查任务 -->
+    <div class="tab-pane fade" id="tasks-tab" role="tabpanel">
+        <div class="card">
+            <div class="card-body">
+                {% if recent_tasks %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>类型</th>
+                                <th>MR</th>
+                                <th>触发方式</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>耗时</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in recent_tasks %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ task.get_review_type_display }}</span></td>
+                                <td>
+                                    <a href="{% url 'web:mr_detail' task.pull_request.project.path_with_namespace task.pull_request.mr_iid %}" class="text-decoration-none">
+                                        !{{ task.pull_request.mr_iid }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark">{{ task.triggered_by }}</span>
+                                </td>
+                                <td><span class="badge badge-status-{{ task.status }}">{{ task.get_status_display }}</span></td>
+                                <td class="text-muted">{{ task.created_at|date:"m-d H:i" }}</td>
+                                <td>
+                                    {% if task.duration_seconds %}
+                                        <span class="text-success">{{ task.duration_seconds }}s</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'web:review_detail' task.task_id %}" class="btn btn-sm btn-outline-primary">
+                                        详情
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <p class="text-muted mb-0">暂无审查任务</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 配置 -->
+    <div class="tab-pane fade" id="config-tab" role="tabpanel">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" action="{% url 'admin:core_reviewconfiguration_change' config.id %}">
+                    {% csrf_token %}
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6 class="mb-3">自动审查配置</h6>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="auto_review_on_open" id="auto_review_on_open" {% if config.auto_review_on_open %}checked{% endif %}>
+                                <label class="form-check-label" for="auto_review_on_open">MR 打开时自动审查</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="auto_review_on_push" id="auto_review_on_push" {% if config.auto_review_on_push %}checked{% endif %}>
+                                <label class="form-check-label" for="auto_review_on_push">推送时自动审查</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="ignore_draft" id="ignore_draft" {% if config.ignore_draft %}checked{% endif %}>
+                                <label class="form-check-label" for="ignore_draft">忽略草稿 MR</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="mb-3">AI 模型配置</h6>
+                            <div class="mb-3">
+                                <label class="form-label">AI 模型</label>
+                                <input type="text" class="form-control" name="ai_model" value="{{ config.ai_model }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">温度参数 (0-2)</label>
+                                <input type="number" step="0.1" min="0" max="2" class="form-control" name="ai_temperature" value="{{ config.ai_temperature }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">最大 Token 数</label>
+                                <input type="number" class="form-control" name="ai_max_tokens" value="{{ config.ai_max_tokens }}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <h6 class="mb-3">Push 事件监听</h6>
+                            <div class="mb-3">
+                                <label class="form-label">监听分支 (逗号分隔，留空监听所有)</label>
+                                <input type="text" class="form-control" name="watch_push_branches" value="{% if config.watch_push_branches %}{{ config.watch_push_branches|join:"," }}{% endif %}" placeholder="main,develop,release/*">
+                                <small class="text-muted">留空表示监听所有分支的 push 事件</small>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>保存配置
+                    </button>
+                    <a href="{% url 'admin:core_reviewconfiguration_change' config.id %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-pencil me-1"></i>在 Admin 中编辑
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// 图表颜色
+const colors = {
+    primary: '#6c5ce7',
+    success: '#00b894',
+    danger: '#d63031',
+    warning: '#fdcb6e',
+    info: '#0984e3',
+    gray: '#dfe6e9'
+};
+
+// 项目趋势图
+async function initProjectTrendChart() {
+    const ctx = document.getElementById('projectTrendChart');
+    if (!ctx) return;
+
+    try {
+        const params = new URLSearchParams();
+        const developer = document.querySelector('input[name="developer"]').value;
+        if (developer) params.append('developer', developer);
+
+        const response = await fetch(`{% url 'web:project_detail_stats_api' project.id %}?${params}`);
+        const data = await response.json();
+
+        const labels = data.review_trends.map(t => {
+            const date = new Date(t.date);
+            return `${date.getMonth() + 1}/${date.getDate()}`;
+        });
+
+        const mrData = data.review_trends.map(t => t.total);
+        const reviewData = data.review_trends.map(t => t.completed);
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'MR',
+                        data: mrData,
+                        borderColor: colors.info,
+                        backgroundColor: colors.info + '20',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: '审查',
+                        data: reviewData,
+                        borderColor: colors.success,
+                        backgroundColor: colors.success + '20',
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Failed to load chart:', e);
+    }
+}
+
+// MR 状态分布
+async function initMrStatusChart() {
+    const ctx = document.getElementById('mrStatusChart');
+    if (!ctx) return;
+
+    const stats = {{ stats.mr }};
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['开启', '已合并', '已关闭'],
+            datasets: [{
+                data: [stats.opened, stats.merged, stats.closed],
+                backgroundColor: [colors.success, colors.info, colors.gray],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+}
+
+// 项目提交统计
+async function initSubmissionChart() {
+    const ctx = document.getElementById('submissionChart');
+    if (!ctx) return;
+
+    try {
+        const params = new URLSearchParams();
+        const developer = document.querySelector('input[name="developer"]').value;
+        if (developer) params.append('developer', developer);
+
+        const response = await fetch(`{% url 'web:project_detail_stats_api' project.id %}?${params}`);
+        const data = await response.json();
+
+        const labels = data.monthly_submissions.map(m => m.month);
+        const counts = data.monthly_submissions.map(m => m.count);
+        const merged = data.monthly_submissions.map(m => m.merged);
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '总提交',
+                        data: counts,
+                        backgroundColor: colors.primary,
+                        borderRadius: 4
+                    },
+                    {
+                        label: '已合并',
+                        data: merged,
+                        backgroundColor: colors.success,
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: { beginAtZero: true },
+                    x: { ticks: { maxRotation: 45 } }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Failed to load chart:', e);
+    }
+}
+
+// 项目平均得分
+async function initScoreChart() {
+    const ctx = document.getElementById('scoreChart');
+    if (!ctx) return;
+
+    try {
+        const params = new URLSearchParams();
+        const developer = document.querySelector('input[name="developer"]').value;
+        if (developer) params.append('developer', developer);
+
+        const response = await fetch(`{% url 'web:project_detail_stats_api' project.id %}?${params}`);
+        const data = await response.json();
+
+        const labels = data.monthly_scores.map(m => m.month);
+        const scores = data.monthly_scores.map(m => m.avg_score);
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '平均得分',
+                    data: scores,
+                    borderColor: colors.warning,
+                    backgroundColor: colors.warning + '30',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        min: 0,
+                        max: 10
+                    },
+                    x: { ticks: { maxRotation: 45 } }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Failed to load chart:', e);
+    }
+}
+
+// 开发者提交统计
+async function initDeveloperSubmissionChart() {
+    const ctx = document.getElementById('developerSubmissionChart');
+    if (!ctx) return;
+
+    try {
+        const params = new URLSearchParams();
+        const developer = document.querySelector('input[name="developer"]').value;
+        if (developer) params.append('developer', developer);
+
+        const response = await fetch(`{% url 'web:project_detail_stats_api' project.id %}?${params}`);
+        const data = await response.json();
+
+        // 只取前15个
+        const topData = data.developer_submissions.slice(0, 15);
+        const labels = topData.map(d => d.username);
+        const totalMrs = topData.map(d => d.total_mrs);
+        const mergedMrs = topData.map(d => d.merged_mrs);
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '总 MR',
+                        data: totalMrs,
+                        backgroundColor: colors.primary,
+                        borderRadius: 4
+                    },
+                    {
+                        label: '已合并',
+                        data: mergedMrs,
+                        backgroundColor: colors.success,
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    x: { beginAtZero: true }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Failed to load chart:', e);
+    }
+}
+
+// 开发者平均得分
+async function initDeveloperScoreChart() {
+    const ctx = document.getElementById('developerScoreChart');
+    if (!ctx) return;
+
+    try {
+        const params = new URLSearchParams();
+        const developer = document.querySelector('input[name="developer"]').value;
+        if (developer) params.append('developer', developer);
+
+        const response = await fetch(`{% url 'web:project_detail_stats_api' project.id %}?${params}`);
+        const data = await response.json();
+
+        // 只取前15个，按得分排序
+        const topData = data.developer_scores.slice(0, 15);
+        const labels = topData.map(d => d.username);
+        const scores = topData.map(d => d.avg_score);
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '平均得分',
+                    data: scores,
+                    backgroundColor: scores.map(s => {
+                        if (s >= 8) return colors.success;
+                        if (s >= 6) return colors.info;
+                        if (s >= 4) return colors.warning;
+                        return colors.danger;
+                    }),
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 10
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Failed to load chart:', e);
+    }
+}
+
+// 初始化
+document.addEventListener('DOMContentLoaded', function() {
+    initProjectTrendChart();
+    initMrStatusChart();
+    initSubmissionChart();
+    initScoreChart();
+    initDeveloperSubmissionChart();
+    initDeveloperScoreChart();
+});
+</script>
+{% endblock %}

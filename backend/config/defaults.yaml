@@ -1,0 +1,150 @@
+# Review Agent 默认配置
+# 使用 Dynaconf 进行集中配置管理
+
+default:
+  # ========== 应用配置 ==========
+  app:
+    name: "Review Agent"
+    version: "1.0.0"
+    debug: false
+    log_level: "INFO"
+
+  # ========== 安全配置 ==========
+  secret_key: "CHANGE_ME_IN_PRODUCTION"
+  allowed_hosts:
+    - "localhost"
+    - "127.0.0.1"
+  cors_origins:
+    - "http://localhost:8000"
+    - "http://localhost:3000"
+
+  # ========== 数据库配置 ==========
+  database:
+    engine: "postgresql"
+    host: "localhost"
+    port: 5432
+    name: "review_agent"
+    user: "review_agent"
+    password: ""
+    pool_size: 20
+    max_overflow: 10
+    conn_max_age: 600
+
+  # ========== Redis 配置 ==========
+  redis:
+    host: "localhost"
+    port: 6379
+    db: 0
+    password: null
+    cache_ttl: 3600
+
+  # ========== GitLab 配置 ==========
+  gitlab:
+    url: "https://gitlab.com"
+    timeout: 30
+    max_retries: 3
+    ssl_verify: true
+    # 以下配置建议通过环境变量或 secrets.yaml 设置
+    app_id: null
+    app_secret: null
+    personal_access_token: null
+
+  # ========== AI 配置 ==========
+  ai:
+    provider: "litellm"
+    model: "gpt-4o"
+    fallback_models:
+      - "gpt-4o-mini"
+      - "claude-3-5-sonnet-20241022"
+    temperature: 0.2
+    max_tokens: 16000
+    timeout: 120
+    # API 建议通过环境变量设置
+    openai_api_key: null
+    anthropic_api_key: null
+
+  # ========== 审查配置 ==========
+  review:
+    # 自动审查配置
+    auto_review_on_open: false
+    auto_review_commands:
+      - "/describe"
+      - "/review"
+    auto_review_on_push: false
+    auto_review_push_commands:
+      - "/review"
+
+    # 忽略规则
+    ignore_draft: true
+    ignore_title_patterns:
+      - "^\\[Auto\\]"
+      - "^Auto"
+      - "^WIP"
+    ignore_branch_patterns: []
+    ignore_label_patterns:
+      - "skip-review"
+      - "no-ai"
+
+    # 审查参数
+    max_concurrent_tasks: 5
+    max_context_tokens: 8000
+    num_max_findings: 5
+
+    # 审查选项
+    require_tests_review: true
+    require_security_review: true
+    require_estimate_effort: true
+    extra_instructions: ""
+
+  # ========== 日志配置 ==========
+  logging:
+    level: "INFO"
+    format: "json"  # json | text
+    output: "stdout"  # stdout | file
+    file_path: "logs/review-agent.log"
+
+  # ========== Celery 配置 ==========
+  celery:
+    broker_url: "redis://localhost:6379/1"
+    result_backend: "redis://localhost:6379/1"
+    task_serializer: "json"
+    result_serializer: "json"
+    accept_content:
+      - "json"
+    timezone: "Asia/Shanghai"
+    enable_utc: true
+    task_track_started: true
+    task_time_limit: 3600
+    worker_prefetch_multiplier: 1
+    worker_max_tasks_per_child: 1000
+
+# ========== 开发环境 ==========
+development:
+  app:
+    debug: true
+  database:
+    name: "review_agent_dev"
+  logging:
+    level: "DEBUG"
+    format: "text"
+
+# ========== 生产环境 ==========
+production:
+  app:
+    debug: false
+  database:
+    name: "review_agent_prod"
+  logging:
+    level: "WARNING"
+    format: "json"
+    output: "stdout"
+
+# ========== 测试环境 ==========
+testing:
+  app:
+    debug: true
+  database:
+    name: "review_agent_test"
+    engine: "postgresql"
+  logging:
+    level: "WARNING"
