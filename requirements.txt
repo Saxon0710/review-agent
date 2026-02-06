@@ -5,7 +5,7 @@ django>=4.2,<5.0
 django-cors-headers>=4.0
 djangorestframework>=3.14
 django-extensions>=3.2.0
-django-filters>=23.0
+django-filter>=23.0
 
 # FastAPI 框架
 fastapi>=0.100.0
