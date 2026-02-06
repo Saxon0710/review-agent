@@ -1,5 +1,6 @@
 # Generated migration for ReviewConfiguration watch_push_branches field
 
+import uuid
 from django.db import migrations, models
 import django.db.models.deletion
 

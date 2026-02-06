@@ -1,5 +1,5 @@
 """Context Processors"""
-from .settings import config
+from config.settings import config
 
 
 def config_context(request):
