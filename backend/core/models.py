@@ -58,6 +58,8 @@ class GitLabProject(TimeStampedModel):
     class Meta:
         db_table = "gitlab_projects"
         ordering = ["name"]
+        verbose_name = "GitLab 项目"
+        verbose_name_plural = "GitLab 项目"
         indexes = [
             models.Index(fields=["path_with_namespace"]),
             models.Index(fields=["is_active", "last_sync_at"]),
@@ -95,6 +97,8 @@ class GitLabUser(TimeStampedModel):
     class Meta:
         db_table = "gitlab_users"
         ordering = ["gitlab_username"]
+        verbose_name = "GitLab 用户"
+        verbose_name_plural = "GitLab 用户"
         indexes = [
             models.Index(fields=["gitlab_user_id"]),
             models.Index(fields=["gitlab_username"]),
@@ -154,6 +158,8 @@ class PullRequest(TimeStampedModel):
     class Meta:
         db_table = "pull_requests"
         ordering = ["-gitlab_created_at"]
+        verbose_name = "合并请求"
+        verbose_name_plural = "合并请求"
         unique_together = [["project", "mr_iid"]]
         indexes = [
             models.Index(fields=["project", "state"]),
@@ -234,6 +240,8 @@ class ReviewTask(TimeStampedModel):
     class Meta:
         db_table = "review_tasks"
         ordering = ["-created_at"]
+        verbose_name = "审查任务"
+        verbose_name_plural = "审查任务"
         indexes = [
             models.Index(fields=["pull_request", "-created_at"]),
             models.Index(fields=["status", "-created_at"]),
@@ -289,6 +297,8 @@ class ReviewComment(TimeStampedModel):
     class Meta:
         db_table = "review_comments"
         ordering = ["id"]
+        verbose_name = "审查评论"
+        verbose_name_plural = "审查评论"
         indexes = [
             models.Index(fields=["task", "comment_type"]),
             models.Index(fields=["file_path"]),
@@ -394,6 +404,8 @@ class AuditLog(TimeStampedModel):
     class Meta:
         db_table = "audit_logs"
         ordering = ["-created_at"]
+        verbose_name = "审计日志"
+        verbose_name_plural = "审计日志"
         indexes = [
             models.Index(fields=["user", "-created_at"]),
             models.Index(fields=["project", "-created_at"]),
@@ -433,6 +445,8 @@ class ReviewReport(TimeStampedModel):
     class Meta:
         db_table = "review_reports"
         ordering = ["-created_at"]
+        verbose_name = "审查报告"
+        verbose_name_plural = "审查报告"
         indexes = [
             models.Index(fields=["pull_request", "-created_at"]),
             models.Index(fields=["review_type", "-created_at"]),

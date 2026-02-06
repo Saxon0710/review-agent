@@ -1,12 +1,22 @@
 """Celery 配置和应用实例"""
 import os
 from celery import Celery
-from config.settings import settings
+
+# 从环境变量读取 Redis 配置
+REDIS_HOST = os.getenv("REVIEW_AGENT_REDIS_HOST", "redis")
+REDIS_PORT = os.getenv("REVIEW_AGENT_REDIS_PORT", "6379")
+REDIS_PASSWORD = os.getenv("REVIEW_AGENT_REDIS_PASSWORD", "")
+
+# 构建 Redis URL
+if REDIS_PASSWORD:
+    redis_url = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0"
+else:
+    redis_url = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
 
 # Celery 配置
 celery_config = {
-    "broker_url": settings.get("redis.broker_url", "redis://localhost:6379/0"),
-    "result_backend": settings.get("redis.backend_url", "redis://localhost:6379/0"),
+    "broker_url": redis_url,
+    "result_backend": redis_url,
     "task_serializer": "json",
     "accept_content": ["json"],
     "result_serializer": "json",

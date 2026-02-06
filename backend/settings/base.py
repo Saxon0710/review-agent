@@ -33,6 +33,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'admin_auto_filters',
+    'django_celery_beat',
+    'django_celery_results',
 
     # 项目应用
     'core.apps.CoreConfig',
@@ -96,7 +98,6 @@ CACHES = {
         'LOCATION': config.redis_url(),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'PARSER_CLASS': 'redis.connection.HiredisParser',
             'SOCKET_CONNECT_TIMEOUT': 5,
             'SOCKET_TIMEOUT': 5,
             'CONNECTION_POOL_KWARGS': {'max_connections': 100},

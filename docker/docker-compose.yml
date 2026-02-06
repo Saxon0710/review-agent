@@ -1,5 +1,14 @@
 # Review Agent Docker Compose 配置
 services:
+  # Redis 缓存和消息队列
+  redis:
+    image: redis:7-alpine
+    container_name: review-agent-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - review-agent-network
   # Django Web 应用
   review-django:
     build:
@@ -24,18 +33,7 @@ services:
     ports:
       - "7000:7000"
     command: >
-      sh -c "
-        python manage.py migrate --noinput &&
-        python manage.py init_admin &&
-        python manage.py collectstatic --noinput &&
-        gunicorn config.wsgi:application
-          --bind 0.0.0.0:7000
-          --workers 4
-          --timeout 120
-          --access-logfile -
-          --error-logfile -
-          --log-level info
-      "
+      sh -c "python manage.py migrate --noinput && python manage.py init_admin && python manage.py collectstatic --noinput && gunicorn wsgi:application --bind 0.0.0.0:7000 --workers 4 --timeout 120 --access-logfile - --error-logfile - --log-level info"
     networks:
       - review-agent-network
 
@@ -62,15 +60,7 @@ services:
       - ../backend:/app
     ports:
       - "7001:7001"
-    command: >
-      sh -c "
-        uvicorn api.main:app
-          --host 0.0.0.0
-          --port 7001
-          --workers 2
-          --loop uvloop
-          --log-level info
-      "
+    command: uvicorn api.main:app --host 0.0.0.0 --port 7001 --workers 2 --loop uvloop --log-level info
     networks:
       - review-agent-network
 
@@ -93,13 +83,10 @@ services:
       REVIEW_AGENT_GITLAB_ACCESS_TOKEN: 7H_sGSfJKyB-2Fanxq9p
       REVIEW_AGENT_AI_MODEL: opus
       REVIEW_AGENT_AI_API_KEY: 32f33dbf4bf24ce9bb72a16d56f8cb6c.yRbAAKMp2DY4t0Nt
+      DJANGO_SETTINGS_MODULE: settings.base
     volumes:
       - ../backend:/app
-    command: >
-      celery -A integration.tasks worker
-        --loglevel=info
-        --concurrency=4
-        --max-tasks-per-child=100
+    command: python celery_start.py -A integration.tasks.celery worker --loglevel=info --concurrency=4 --max-tasks-per-child=100
     networks:
       - review-agent-network
 
@@ -117,12 +104,11 @@ services:
       REVIEW_AGENT_DATABASE_PASSWORD: YY5VV5
       REVIEW_AGENT_REDIS_HOST: redis
       REVIEW_AGENT_REDIS_PORT: 6379
+      REVIEW_AGENT_SECRET_KEY: 4tJmFLm8PcMbiykTHbwX_8nXwfbhjSrMvjN_un3oCS5bGzFeXmd6A42tAApEjbT4aoU
+      DJANGO_SETTINGS_MODULE: settings.base
     volumes:
       - ../backend:/app
-    command: >
-      celery -A integration.tasks beat
-        --loglevel=info
-        --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    command: python celery_start.py -A integration.tasks.celery beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     networks:
       - review-agent-network
 

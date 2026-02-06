@@ -1,5 +1,6 @@
 """Django Admin 配置"""
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth import get_user_model
 from django.db.models import Count
 
@@ -15,6 +16,11 @@ from .models import (
 )
 
 User = get_user_model()
+
+# 设置 Admin 站点中文名称
+admin.site.site_header = "Review Agent 管理后台"
+admin.site.site_title = "Review Agent 管理"
+admin.site.index_title = "欢迎使用 Review Agent 代码审查系统"
 
 
 @admin.register(GitLabProject)
@@ -215,8 +221,157 @@ if User.__name__ == "User":
         pass
 
     @admin.register(User)
-    class CustomUserAdmin(admin.ModelAdmin):
+    class CustomUserAdmin(UserAdmin):
         list_display = ["username", "email", "is_staff", "is_active", "date_joined"]
         list_filter = ["is_staff", "is_active", "groups"]
         search_fields = ["username", "email"]
         ordering = ["username"]
+
+
+# ========== Celery Beat 中文化 ==========
+try:
+    from django_celery_beat import models as beat_models
+
+    # PeriodicTask - 周期任务
+    try:
+        admin.site.unregister(beat_models.PeriodicTask)
+    except admin.sites.NotRegistered:
+        pass
+
+    @admin.register(beat_models.PeriodicTask)
+    class PeriodicTaskAdmin(admin.ModelAdmin):
+        list_display = ["name", "task", "enabled", "interval", "crontab"]
+        list_filter = ["enabled", "task"]
+        search_fields = ["name"]
+
+        class Meta:
+            verbose_name = "周期任务"
+            verbose_name_plural = "周期任务"
+
+    beat_models.PeriodicTask._meta.verbose_name = "周期任务"
+    beat_models.PeriodicTask._meta.verbose_name_plural = "周期任务"
+
+    # IntervalSchedule - 间隔调度
+    try:
+        admin.site.unregister(beat_models.IntervalSchedule)
+    except admin.sites.NotRegistered:
+        pass
+
+    @admin.register(beat_models.IntervalSchedule)
+    class IntervalScheduleAdmin(admin.ModelAdmin):
+        list_display = ["every", "period"]
+
+        class Meta:
+            verbose_name = "间隔调度"
+            verbose_name_plural = "间隔调度"
+
+    beat_models.IntervalSchedule._meta.verbose_name = "间隔调度"
+    beat_models.IntervalSchedule._meta.verbose_name_plural = "间隔调度"
+
+    # CrontabSchedule - Crontab 调度
+    try:
+        admin.site.unregister(beat_models.CrontabSchedule)
+    except admin.sites.NotRegistered:
+        pass
+
+    @admin.register(beat_models.CrontabSchedule)
+    class CrontabScheduleAdmin(admin.ModelAdmin):
+        list_display = ["minute", "hour", "day_of_week", "day_of_month", "month_of_year"]
+
+        class Meta:
+            verbose_name = "Crontab 调度"
+            verbose_name_plural = "Crontab 调度"
+
+    beat_models.CrontabSchedule._meta.verbose_name = "Crontab 调度"
+    beat_models.CrontabSchedule._meta.verbose_name_plural = "Crontab 调度"
+
+    # ClockedSchedule - 定时调度
+    try:
+        admin.site.unregister(beat_models.ClockedSchedule)
+    except admin.sites.NotRegistered:
+        pass
+
+    @admin.register(beat_models.ClockedSchedule)
+    class ClockedScheduleAdmin(admin.ModelAdmin):
+        list_display = ["clocked_time"]
+
+        class Meta:
+            verbose_name = "定时调度"
+            verbose_name_plural = "定时调度"
+
+    beat_models.ClockedSchedule._meta.verbose_name = "定时调度"
+    beat_models.ClockedSchedule._meta.verbose_name_plural = "定时调度"
+
+    # SolarSchedule - 日照调度
+    try:
+        admin.site.unregister(beat_models.SolarSchedule)
+    except admin.sites.NotRegistered:
+        pass
+
+    @admin.register(beat_models.SolarSchedule)
+    class SolarScheduleAdmin(admin.ModelAdmin):
+        list_display = ["event", "latitude", "longitude"]
+
+        class Meta:
+            verbose_name = "日照调度"
+            verbose_name_plural = "日照调度"
+
+    beat_models.SolarSchedule._meta.verbose_name = "日照调度"
+    beat_models.SolarSchedule._meta.verbose_name_plural = "日照调度"
+
+    # 修改应用名称
+    beat_models.PeriodicTask._meta.app_config.verbose_name = "定时任务"
+
+except ImportError:
+    pass
+
+
+# ========== Celery Results 中文化 ==========
+try:
+    from django_celery_results import models as result_models
+
+    # TaskResult - 任务结果
+    try:
+        admin.site.unregister(result_models.TaskResult)
+    except admin.sites.NotRegistered:
+        pass
+
+    @admin.register(result_models.TaskResult)
+    class TaskResultAdmin(admin.ModelAdmin):
+        list_display = ["task_id", "status", "date_created", "date_done"]
+        list_filter = ["status"]
+        search_fields = ["task_id"]
+        readonly_fields = ["date_created", "date_done"]
+
+        class Meta:
+            verbose_name = "任务结果"
+            verbose_name_plural = "任务结果"
+
+    result_models.TaskResult._meta.verbose_name = "任务结果"
+    result_models.TaskResult._meta.verbose_name_plural = "任务结果"
+
+    # 修改应用名称
+    if hasattr(result_models.TaskResult._meta, 'app_config'):
+        result_models.TaskResult._meta.app_config.verbose_name = "任务结果"
+
+except ImportError:
+    pass
+
+
+# ========== 修改 Auth 应用中文名称 ==========
+try:
+    from django.contrib.auth.models import Group
+    try:
+        admin.site.unregister(Group)
+    except admin.sites.NotRegistered:
+        pass
+
+    @admin.register(Group)
+    class GroupAdmin(admin.ModelAdmin):
+        list_display = ["name"]
+        search_fields = ["name"]
+
+    Group._meta.verbose_name = "用户组"
+    Group._meta.verbose_name_plural = "用户组"
+except Exception:
+    pass
