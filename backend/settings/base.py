@@ -169,6 +169,27 @@ CELERY_WORKER_PREFETCH_MULTIPLIER = config.celery.get('worker_prefetch_multiplie
 CELERY_WORKER_MAX_TASKS_PER_CHILD = config.celery.get('worker_max_tasks_per_child', 1000)
 
 # ========== 日志配置 ==========
+# 构建 handlers 字典，只在需要时添加文件 handler
+_handlers = {
+    'console': {
+        'class': 'logging.StreamHandler',
+        'formatter': 'simple' if config.logging['format'] == 'text' else 'json',
+    }
+}
+
+# 只有在输出到文件时才配置文件 handler
+if config.logging['output'] == 'file':
+    import os
+    log_dir = BASE_DIR / 'logs'
+    os.makedirs(log_dir, exist_ok=True)
+    _handlers['file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'filename': log_dir / 'review-agent.log',
+        'maxBytes': 1024 * 1024 * 100,  # 100MB
+        'backupCount': 10,
+        'formatter': 'json' if config.logging['format'] == 'json' else 'verbose',
+    }
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -186,19 +207,7 @@ LOGGING = {
             'format': '%(asctime)s %(name)s %(levelname)s %(message)s',
         },
     },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple' if config.logging['format'] == 'text' else 'json',
-        },
-        'file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'review-agent.log',
-            'maxBytes': 1024 * 1024 * 100,  # 100MB
-            'backupCount': 10,
-            'formatter': 'json' if config.logging['format'] == 'json' else 'verbose',
-        },
-    },
+    'handlers': _handlers,
     'root': {
         'handlers': ['console'],
         'level': config.logging['level'],

@@ -1,6 +1,4 @@
 # Review Agent Docker Compose 配置
-version: "3.9"
-
 services:
   # Django Web 应用
   review-django:
