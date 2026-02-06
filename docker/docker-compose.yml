@@ -7,18 +7,18 @@ services:
       dockerfile: docker/Dockerfile.django
     container_name: review-agent-django
     environment:
-      REVIEW_AGENT_ENV: ${ENV:-production}
-      REVIEW_AGENT_DATABASE_HOST: ${POSTGRES_HOST:-10.20.4.11}
-      REVIEW_AGENT_DATABASE_NAME: ${POSTGRES_DB:-review_agent}
-      REVIEW_AGENT_DATABASE_USER: ${POSTGRES_USER:-avatar}
-      REVIEW_AGENT_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-YY5VV5}
+      REVIEW_AGENT_ENV: development
+      REVIEW_AGENT_DATABASE_HOST: 10.20.4.11
+      REVIEW_AGENT_DATABASE_NAME: review_agent
+      REVIEW_AGENT_DATABASE_USER: avatar
+      REVIEW_AGENT_DATABASE_PASSWORD: YY5VV5
       REVIEW_AGENT_REDIS_HOST: redis
       REVIEW_AGENT_REDIS_PORT: 6379
-      REVIEW_AGENT_SECRET_KEY: ${SECRET_KEY}
-      REVIEW_AGENT_GITLAB_URL: ${GITLAB_URL:-https://gitlab.com}
-      REVIEW_AGENT_GITLAB_ACCESS_TOKEN: ${GITLAB_ACCESS_TOKEN}
-      REVIEW_AGENT_AI_MODEL: ${AI_MODEL:-gpt-4o}
-      REVIEW_AGENT_AI_API_KEY: ${AI_API_KEY}
+      REVIEW_AGENT_SECRET_KEY:
+      REVIEW_AGENT_GITLAB_URL: http://10.20.10.198/
+      REVIEW_AGENT_GITLAB_ACCESS_TOKEN: 7H_sGSfJKyB-2Fanxq9p
+      REVIEW_AGENT_AI_MODEL: opus
+      REVIEW_AGENT_AI_API_KEY: 32f33dbf4bf24ce9bb72a16d56f8cb6c.yRbAAKMp2DY4t0Nt
     volumes:
       - ../backend:/app
     ports:
@@ -46,17 +46,17 @@ services:
       dockerfile: docker/Dockerfile.fastapi
     container_name: review-agent-fastapi
     environment:
-      REVIEW_AGENT_ENV: ${ENV:-production}
-      REVIEW_AGENT_DATABASE_HOST: postgres
-      REVIEW_AGENT_DATABASE_NAME: ${POSTGRES_DB:-review_agent}
-      REVIEW_AGENT_DATABASE_USER: ${POSTGRES_USER:-review_agent}
-      REVIEW_AGENT_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-review_agent_password}
+      REVIEW_AGENT_ENV: development
+      REVIEW_AGENT_DATABASE_HOST: 10.20.4.11
+      REVIEW_AGENT_DATABASE_NAME: review_agent
+      REVIEW_AGENT_DATABASE_USER: avatar
+      REVIEW_AGENT_DATABASE_PASSWORD: YY5VV5
       REVIEW_AGENT_REDIS_HOST: redis
       REVIEW_AGENT_REDIS_PORT: 6379
-      REVIEW_AGENT_GITLAB_URL: ${GITLAB_URL:-https://gitlab.com}
-      REVIEW_AGENT_GITLAB_ACCESS_TOKEN: ${GITLAB_ACCESS_TOKEN}
-      REVIEW_AGENT_AI_MODEL: ${AI_MODEL:-gpt-4o}
-      REVIEW_AGENT_AI_API_KEY: ${AI_API_KEY}
+      REVIEW_AGENT_GITLAB_URL: http://10.20.10.198/
+      REVIEW_AGENT_GITLAB_ACCESS_TOKEN: 7H_sGSfJKyB-2Fanxq9p
+      REVIEW_AGENT_AI_MODEL: opus
+      REVIEW_AGENT_AI_API_KEY: 32f33dbf4bf24ce9bb72a16d56f8cb6c.yRbAAKMp2DY4t0Nt
     volumes:
       - ../backend:/app
     ports:
@@ -80,17 +80,17 @@ services:
       dockerfile: docker/Dockerfile.fastapi
     container_name: review-agent-celery-worker
     environment:
-      REVIEW_AGENT_ENV: ${ENV:-production}
-      REVIEW_AGENT_DATABASE_HOST: postgres
-      REVIEW_AGENT_DATABASE_NAME: ${POSTGRES_DB:-review_agent}
-      REVIEW_AGENT_DATABASE_USER: ${POSTGRES_USER:-review_agent}
-      REVIEW_AGENT_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-review_agent_password}
+      REVIEW_AGENT_ENV: development
+      REVIEW_AGENT_DATABASE_HOST: 10.20.4.11
+      REVIEW_AGENT_DATABASE_NAME: review_agent
+      REVIEW_AGENT_DATABASE_USER: avatar
+      REVIEW_AGENT_DATABASE_PASSWORD: YY5VV5
       REVIEW_AGENT_REDIS_HOST: redis
       REVIEW_AGENT_REDIS_PORT: 6379
-      REVIEW_AGENT_GITLAB_URL: ${GITLAB_URL:-https://gitlab.com}
-      REVIEW_AGENT_GITLAB_ACCESS_TOKEN: ${GITLAB_ACCESS_TOKEN}
-      REVIEW_AGENT_AI_MODEL: ${AI_MODEL:-gpt-4o}
-      REVIEW_AGENT_AI_API_KEY: ${AI_API_KEY}
+      REVIEW_AGENT_GITLAB_URL: http://10.20.10.198/
+      REVIEW_AGENT_GITLAB_ACCESS_TOKEN: 7H_sGSfJKyB-2Fanxq9p
+      REVIEW_AGENT_AI_MODEL: opus
+      REVIEW_AGENT_AI_API_KEY: 32f33dbf4bf24ce9bb72a16d56f8cb6c.yRbAAKMp2DY4t0Nt
     volumes:
       - ../backend:/app
     command: >
@@ -108,11 +108,11 @@ services:
       dockerfile: docker/Dockerfile.fastapi
     container_name: review-agent-celery-beat
     environment:
-      REVIEW_AGENT_ENV: ${ENV:-production}
-      REVIEW_AGENT_DATABASE_HOST: postgres
-      REVIEW_AGENT_DATABASE_NAME: ${POSTGRES_DB:-review_agent}
-      REVIEW_AGENT_DATABASE_USER: ${POSTGRES_USER:-review_agent}
-      REVIEW_AGENT_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-review_agent_password}
+      REVIEW_AGENT_ENV: development
+      REVIEW_AGENT_DATABASE_HOST: 10.20.4.11
+      REVIEW_AGENT_DATABASE_NAME: review_agent
+      REVIEW_AGENT_DATABASE_USER: avatar
+      REVIEW_AGENT_DATABASE_PASSWORD: YY5VV5
       REVIEW_AGENT_REDIS_HOST: redis
       REVIEW_AGENT_REDIS_PORT: 6379
     volumes:
