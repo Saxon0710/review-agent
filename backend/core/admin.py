@@ -209,6 +209,11 @@ class ReviewReportAdmin(admin.ModelAdmin):
 
 # 扩展 User Admin
 if User.__name__ == "User":
+    try:
+        admin.site.unregister(User)
+    except admin.sites.NotRegistered:
+        pass
+
     @admin.register(User)
     class CustomUserAdmin(admin.ModelAdmin):
         list_display = ["username", "email", "is_staff", "is_active", "date_joined"]
