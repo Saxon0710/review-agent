@@ -1,10 +1,15 @@
 {% extends "base.html" %}
 
 {% block title %}项目列表 - {% endblock %}
+{% block breadcrumb %}项目列表{% endblock %}
 
 {% block content %}
+<!-- 操作按钮区 -->
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>项目列表</h1>
+    <div>
+        <h4 class="mb-1">项目管理</h4>
+        <p class="text-muted mb-0">管理和同步 GitLab 项目</p>
+    </div>
     <a href="/admin/core/gitlabproject/add/" class="btn btn-primary">
         <i class="bi bi-plus-lg me-1"></i>添加项目
     </a>

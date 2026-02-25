@@ -1,23 +1,11 @@
 {% extends "base.html" %}
 
 {% block title %}审查任务 - {% endblock %}
+{% block breadcrumb %}审查任务{% endblock %}
 
 {% block extra_css %}
 <style>
     .chart-container { position: relative; height: 250px; }
-    .mini-stat {
-        text-align: center;
-        padding: 1rem;
-        border-radius: 8px;
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        color: white;
-    }
-    .mini-stat .value { font-size: 1.75rem; font-weight: bold; }
-    .mini-stat .label { font-size: 0.75rem; opacity: 0.9; }
-    .mini-stat.bg-success { background: linear-gradient(135deg, var(--success-color), #55efc4); }
-    .mini-stat.bg-danger { background: linear-gradient(135deg, var(--danger-color), #ff7675); }
-    .mini-stat.bg-warning { background: linear-gradient(135deg, var(--warning-color), #ffeaa7); }
-    .mini-stat.bg-info { background: linear-gradient(135deg, var(--info-color), #74b9ff); }
     .filter-collapse { cursor: pointer; }
     .filter-collapse .bi-chevron-down { transition: transform 0.2s; }
     .filter-collapse.collapsed .bi-chevron-down { transform: rotate(-90deg); }
@@ -25,16 +13,6 @@
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 mb-1">📋 审查任务</h1>
-        <p class="text-muted mb-0">管理和查看所有代码审查任务</p>
-    </div>
-    <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
-        <i class="bi bi-arrow-clockwise me-1"></i>刷新
-    </button>
-</div>
-
 <!-- 筛选器 -->
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center" onclick="toggleFilters()" style="cursor: pointer;">
@@ -290,13 +268,13 @@ function toggleFilters() {
     icon.classList.toggle('collapsed');
 }
 
-// 图表颜色
+// 图表颜色 - 若依风格
 const colors = {
-    primary: '#6c5ce7',
-    success: '#00b894',
-    danger: '#d63031',
-    warning: '#fdcb6e',
-    info: '#0984e3',
+    primary: '#409EFF',
+    success: '#67C23A',
+    danger: '#F56C6C',
+    warning: '#E6A23C',
+    info: '#909399',
     purple: '#a29bfe'
 };
 

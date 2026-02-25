@@ -1,18 +1,25 @@
 {% extends "base.html" %}
 
 {% block title %}审查任务 {{ task.task_id|slice:":8" }} - {% endblock %}
+{% block breadcrumb %}审查任务 / 详情{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
+<!-- 任务头部信息 -->
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div class="flex-grow-1">
         <div class="mb-2">
-            <a href="{% url 'web:review_list' %}" class="text-decoration-none">
+            <a href="{% url 'web:review_list' %}" class="text-decoration-none text-muted">
                 <i class="bi bi-arrow-left me-1"></i>审查任务列表
             </a>
         </div>
-        <h1>审查任务详情</h1>
+        <h3 class="mb-2">审查任务详情</h3>
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <span class="text-muted small">ID: <code>{{ task.task_id|slice:":8" }}</code></span>
+            <span class="badge badge-status-{{ task.status }}">{{ task.get_status_display }}</span>
+            <span class="badge bg-secondary">{{ task.get_review_type_display }}</span>
+        </div>
     </div>
-    <div>
+    <div class="d-flex gap-2">
         {% if task.status == 'pending' or task.status == 'running' %}
         <form method="post" action="{% url 'web:review_cancel' task.task_id %}" class="d-inline">
             {% csrf_token %}
@@ -23,7 +30,7 @@
         {% endif %}
         {% if task.status == 'completed' and task.pull_request.project %}
         <a href="{{ task.pull_request.url }}" target="_blank" class="btn btn-outline-primary">
-            <i class="bi bi-box-arrow-up-right me-1"></i>在 GitLab 查看
+            <i class="bi bi-box-arrow-up-right me-1"></i>GitLab
         </a>
         {% endif %}
     </div>

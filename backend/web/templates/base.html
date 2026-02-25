@@ -6,66 +6,95 @@
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <style>
-        :root {
-            --primary-color: #6c5ce7;
-            --secondary-color: #a29bfe;
-            --success-color: #00b894;
-            --danger-color: #d63031;
-            --warning-color: #fdcb6e;
-            --info-color: #0984e3;
-        }
-        body { background-color: #f8f9fa; }
-        .sidebar { min-height: 100vh; background-color: #2d3436; color: #dfe6e9; }
-        .sidebar .nav-link { color: #b2bec3; }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background-color: var(--primary-color); }
-        .sidebar .brand { padding: 1.5rem; font-size: 1.25rem; font-weight: bold; color: #fff; border-bottom: 1px solid #636e72; }
-        .card { border: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .card-header { background-color: #fff; border-bottom: 1px solid #e9ecef; font-weight: 600; }
-        .badge-status-pending { background-color: var(--warning-color); }
-        .badge-status-running { background-color: var(--info-color); }
-        .badge-status-completed { background-color: var(--success-color); }
-        .badge-status-failed { background-color: var(--danger-color); }
-        .stat-card { padding: 1.5rem; }
-        .stat-value { font-size: 2rem; font-weight: bold; color: var(--primary-color); }
-        .stat-label { color: #636e72; font-size: 0.875rem; }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav class="col-md-2 d-md-block sidebar p-0">
-                <div class="brand d-flex justify-content-between align-items-center">
-                    <span>🤖 Review Agent</span>
-                    <small class="text-muted">v{{ app_version }}</small>
-                </div>
-                <div class="nav flex-column py-2">
-                    <a class="nav-link" href="{% url 'web:dashboard' %}">
-                        <i class="bi bi-speedometer2 me-2"></i>仪表板
-                    </a>
-                    <a class="nav-link" href="{% url 'web:project_list' %}">
-                        <i class="bi bi-folder me-2"></i>项目
-                    </a>
-                    <a class="nav-link" href="{% url 'web:review_list' %}">
-                        <i class="bi bi-file-earmark-check me-2"></i>审查任务
-                    </a>
-                    <hr class="border-secondary">
-                    <a class="nav-link" href="/admin/">
-                        <i class="bi bi-gear me-2"></i>管理后台
-                    </a>
-                </div>
-            </nav>
+{% load static %}
+<div class="app-wrapper">
+    <!-- 移动端遮罩层 -->
+    <div class="sidebar-overlay"></div>
 
-            <!-- Main Content -->
-            <main class="col-md-10 ms-sm-auto px-md-4 py-4">
-                {% block content %}{% endblock %}
-            </main>
+    <!-- 侧边栏 -->
+    <aside class="sidebar-container">
+        <!-- Logo -->
+        <div class="sidebar-logo">
+            <span class="logo-text">Review Agent</span>
         </div>
-    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    {% block extra_js %}{% endblock %}
+        <!-- 菜单 -->
+        <nav class="sidebar-menu">
+            <div class="menu-item {% if request.path == '/' %}active{% endif %}"
+                 data-url="/" data-title="仪表板" data-icon="bi-speedometer2" data-closable="false">
+                <i class="bi bi-speedometer2"></i>
+                <span>仪表板</span>
+            </div>
+            <div class="menu-item {% if '/projects' in request.path %}active{% endif %}"
+                 data-url="/projects/" data-title="项目列表" data-icon="bi-folder" data-closable="true">
+                <i class="bi bi-folder"></i>
+                <span>项目列表</span>
+            </div>
+            <div class="menu-item {% if '/reviews' in request.path %}active{% endif %}"
+                 data-url="/reviews/" data-title="审查任务" data-icon="bi-file-earmark-check" data-closable="true">
+                <i class="bi bi-file-earmark-check"></i>
+                <span>审查任务</span>
+            </div>
+            <div class="menu-divider"></div>
+            <div class="menu-item" data-url="/admin/" data-title="管理后台" data-icon="bi-gear" data-closable="true">
+                <i class="bi bi-gear"></i>
+                <span>管理后台</span>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- 主容器 -->
+    <div class="main-container">
+        <!-- 顶部导航栏 -->
+        <header class="navbar">
+            <div class="navbar-left">
+                <button id="sidebarToggle" class="hamburger" title="切换菜单">
+                    <i class="bi bi-list"></i>
+                </button>
+                <nav class="breadcrumb">
+                    <div class="breadcrumb-item">
+                        <a href="/" data-url="/">
+                            <i class="bi bi-house"></i>
+                        </a>
+                    </div>
+                    <div class="breadcrumb-item active" id="breadcrumbCurrent">{% block breadcrumb %}首页{% endblock %}</div>
+                </nav>
+            </div>
+            <div class="navbar-right">
+                <span class="text-muted small">v{{ app_version }}</span>
+            </div>
+        </header>
+
+        <!-- 标签页导航 -->
+        <div class="tags-nav">
+            <div class="tags-list" id="tagsList">
+                <!-- 标签项由 JS 动态生成 -->
+            </div>
+            <div class="tags-actions">
+                <button id="refreshTag" class="tag-action" title="刷新当前标签">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+                <button id="closeAllTags" class="tag-action" title="关闭所有标签">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <main class="app-main">
+            <div class="app-content">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{% static 'js/app.js' %}"></script>
+{% block extra_js %}{% endblock %}
 </body>
 </html>

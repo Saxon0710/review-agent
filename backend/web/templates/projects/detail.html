@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}{{ project.name }} - {% endblock %}
+{% block breadcrumb %}项目列表 / {{ project.name }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -8,7 +9,7 @@
     .chart-container-sm { position: relative; height: 200px; }
     .stat-card { padding: 1rem; }
     .stat-value { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); }
-    .stat-label { color: #636e72; font-size: 0.875rem; }
+    .stat-label { color: var(--text-secondary); font-size: 0.875rem; }
     .score-badge {
         display: inline-block;
         padding: 0.5rem 1rem;
@@ -16,17 +17,18 @@
         font-weight: bold;
         font-size: 1.25rem;
     }
-    .score-excellent { background: linear-gradient(135deg, #00b894, #55efc4); color: white; }
-    .score-good { background: linear-gradient(135deg, #0984e3, #74b9ff); color: white; }
-    .score-fair { background: linear-gradient(135deg, #fdcb6e, #ffeaa7); color: #333; }
-    .score-poor { background: linear-gradient(135deg, #d63031, #ff7675); color: white; }
+    .score-excellent { background: linear-gradient(135deg, #67C23A, #85ce61); color: white; }
+    .score-good { background: linear-gradient(135deg, #409EFF, #66b1ff); color: white; }
+    .score-fair { background: linear-gradient(135deg, #E6A23C, #ebb563); color: #333; }
+    .score-poor { background: linear-gradient(135deg, #F56C6C, #f78989); color: white; }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- 项目头部信息 -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 mb-1">{{ project.name }}</h1>
+        <h3 class="mb-1">{{ project.name }}</h3>
         <p class="text-muted mb-0"><code>{{ project.path_with_namespace }}</code></p>
     </div>
     <div>
