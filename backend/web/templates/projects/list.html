@@ -4,21 +4,70 @@
 {% block breadcrumb %}项目列表{% endblock %}
 
 {% block content %}
-<!-- 操作按钮区 -->
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h4 class="mb-1">项目管理</h4>
-        <p class="text-muted mb-0">管理和同步 GitLab 项目</p>
+<div class="page-container">
+    <!-- 搜索区域 -->
+    <div class="search-panel">
+        <div class="search-panel-header">
+            <span><i class="bi bi-search me-2"></i>搜索</span>
+            <button type="button" class="search-toggle" onclick="toggleSearchPanel()">
+                <i class="bi bi-chevron-up" id="searchToggleIcon"></i>
+            </button>
+        </div>
+        <div class="search-panel-body" id="searchPanelBody">
+            <form method="get" class="search-form">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">项目名称</label>
+                        <input type="text" name="name" class="form-control" placeholder="请输入项目名称" value="{{ filters.name }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">项目路径</label>
+                        <input type="text" name="path" class="form-control" placeholder="请输入项目路径" value="{{ filters.path }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">可见性</label>
+                        <select name="visibility" class="form-select">
+                            <option value="">全部</option>
+                            <option value="public" {% if filters.visibility == 'public' %}selected{% endif %}>公开</option>
+                            <option value="private" {% if filters.visibility == 'private' %}selected{% endif %}>私有</option>
+                            <option value="internal" {% if filters.visibility == 'internal' %}selected{% endif %}>内部</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="search-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>搜索
+                    </button>
+                    <button type="button" class="btn btn-reset" onclick="resetSearch()">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>重置
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
-    <a href="/admin/core/gitlabproject/add/" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1"></i>添加项目
-    </a>
-</div>
 
-<div class="card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table">
+    <!-- 列表区域 -->
+    <div class="list-panel">
+        <!-- 工具栏 -->
+        <div class="list-toolbar">
+            <div class="toolbar-left">
+                <a href="/admin/core/gitlabproject/add/" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i>新增
+                </a>
+                <button type="button" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-clockwise me-1"></i>刷新
+                </button>
+            </div>
+            <div class="toolbar-right">
+                <span class="text-muted">
+                    <i class="bi bi-list-ul me-1"></i>共 {{ paginator.count|default:projects.count }} 条
+                </span>
+            </div>
+        </div>
+
+        <!-- 数据表格 -->
+        <div class="table-wrapper">
+            <table class="table table-hover">
                 <thead>
                     <tr>
                         <th>项目名称</th>
@@ -34,11 +83,11 @@
                     {% for project in projects %}
                     <tr>
                         <td>
-                            <a href="{% url 'web:project_detail' project.path_with_namespace %}">
+                            <a href="{% url 'web:project_detail' project.path_with_namespace %}" class="table-link">
                                 {{ project.name }}
                             </a>
                         </td>
-                        <td><code>{{ project.path_with_namespace }}</code></td>
+                        <td><code class="small">{{ project.path_with_namespace }}</code></td>
                         <td>
                             <span class="badge {% if project.visibility == 'public' %}bg-success{% elif project.visibility == 'private' %}bg-danger{% else %}bg-info{% endif %}">
                                 {{ project.get_visibility_display }}
@@ -55,39 +104,69 @@
                         <td>{{ project.review_count }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="{% url 'web:project_detail' project.path_with_namespace %}" class="btn btn-outline-primary">详情</a>
-                                <a href="{% url 'web:project_sync' project.id %}" class="btn btn-outline-secondary">同步</a>
+                                <a href="{% url 'web:project_detail' project.path_with_namespace %}" class="btn btn-sm btn-link">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'web:project_sync' project.id %}" class="btn btn-sm btn-link">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </a>
                             </div>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center">暂无项目</td>
+                        <td colspan="7" class="text-center text-muted">暂无数据</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
 
+        <!-- 分页 -->
         {% if is_paginated %}
-        <nav aria-label="Page navigation">
-            <ul class="pagination justify-content-center">
-                {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">上一页</a>
+        <div class="pagination-wrapper">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_obj.number }}</span>
                     </li>
-                {% endif %}
-                <li class="page-item active">
-                    <span class="page-link">{{ page_obj.number }}</span>
-                </li>
-                {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">下一页</a>
-                    </li>
-                {% endif %}
-            </ul>
-        </nav>
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% for k,v in request.GET.items %}{% if k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+                <div class="pagination-info">
+                    第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页
+                </div>
+            </nav>
+        </div>
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleSearchPanel() {
+    const body = document.getElementById('searchPanelBody');
+    const icon = document.getElementById('searchToggleIcon');
+    body.classList.toggle('show');
+    icon.classList.toggle('bi-chevron-up');
+    icon.classList.toggle('bi-chevron-down');
+}
+
+function resetSearch() {
+    window.location.href = '{% url 'web:project_list' %}';
+}
+</script>
 {% endblock %}

@@ -730,3 +730,332 @@ a:hover {
 ::-webkit-scrollbar-track {
     background-color: var(--bg-color);
 }
+
+/* ==================== 页面容器（若依风格） ==================== */
+.page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* ==================== 搜索面板 ==================== */
+.search-panel {
+    background-color: var(--bg-white);
+    border: 1px solid var(--border-lighter);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+.search-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-lighter);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    background-color: #fafafa;
+}
+
+.search-toggle {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+}
+
+.search-toggle:hover {
+    background-color: var(--bg-color);
+    color: var(--primary-color);
+}
+
+.search-panel-body {
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.search-panel-body:not(.show) {
+    display: none;
+}
+
+.search-form {
+    margin: 0;
+}
+
+.search-form .form-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-regular);
+    margin-bottom: 6px;
+}
+
+.search-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-reset {
+    background-color: #fff;
+    border: 1px solid var(--border-base);
+    color: var(--text-regular);
+}
+
+.btn-reset:hover {
+    background-color: var(--bg-color);
+    border-color: var(--border-base);
+    color: var(--primary-color);
+}
+
+/* ==================== 列表面板 ==================== */
+.list-panel {
+    background-color: var(--bg-white);
+    border: 1px solid var(--border-lighter);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* 工具栏 */
+.list-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-lighter);
+}
+
+.toolbar-left {
+    display: flex;
+    gap: 10px;
+}
+
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* 表格包装器 */
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.table-wrapper .table {
+    margin-bottom: 0;
+}
+
+.table-wrapper .table thead th {
+    background-color: #fafafa;
+    border-bottom: 1px solid var(--border-lighter);
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 12px 15px;
+}
+
+.table-wrapper .table tbody td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--border-lighter);
+}
+
+.table-wrapper .table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table-wrapper .table tbody tr:hover {
+    background-color: var(--primary-lighter);
+}
+
+/* 表格链接 */
+.table-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.table-link:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+/* 表格操作按钮 */
+.table .btn-link {
+    padding: 4px 8px;
+    color: var(--text-regular);
+    background: transparent;
+    border: none;
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.table .btn-link:hover {
+    color: var(--primary-color);
+}
+
+/* ==================== 分页包装器 ==================== */
+.pagination-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-top: 1px solid var(--border-lighter);
+}
+
+.pagination-wrapper nav {
+    flex: 1;
+}
+
+.pagination-info {
+    margin-left: 20px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.pagination-wrapper .pagination {
+    margin-bottom: 0;
+    justify-content: flex-start;
+}
+
+.pagination-wrapper .page-link {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-color: var(--border-lighter);
+    color: var(--text-regular);
+    font-size: 13px;
+}
+
+.pagination-wrapper .page-link:hover {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.pagination-wrapper .page-item.active .page-link {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+/* ==================== 空状态 ==================== */
+.table .text-center.text-muted {
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+/* ==================== 卡片头部样式优化 ==================== */
+.card-header i {
+    color: var(--primary-color);
+}
+
+/* ==================== 统计概览区域 ==================== */
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+@media (max-width: 1200px) {
+    .stats-overview {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 576px) {
+    .stats-overview {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==================== 迷你卡片 ==================== */
+.mini-card {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+    color: white;
+    padding: 20px;
+    border-radius: 4px;
+    text-align: center;
+    transition: var(--transition-base);
+}
+
+.mini-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-light);
+}
+
+.mini-card .value {
+    font-size: 28px;
+    font-weight: bold;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+
+.mini-card .label {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.mini-card.success {
+    background: linear-gradient(135deg, var(--success-color), #85ce61);
+}
+
+.mini-card.warning {
+    background: linear-gradient(135deg, var(--warning-color), #ebb563);
+}
+
+.mini-card.danger {
+    background: linear-gradient(135deg, var(--danger-color), #f78989);
+}
+
+.mini-card.info {
+    background: linear-gradient(135deg, var(--info-color), #a6a9ad);
+}
+
+/* ==================== 图表区域 ==================== */
+.charts-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+@media (max-width: 992px) {
+    .charts-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.chart-card {
+    background-color: var(--bg-white);
+    border: 1px solid var(--border-lighter);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+.chart-card .card-header {
+    padding: 12px 20px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border-lighter);
+}
+
+.chart-card .card-body {
+    padding: 20px;
+}
+
+.chart-box {
+    height: 250px;
+}
+
+.chart-box.small {
+    height: 180px;
+}
