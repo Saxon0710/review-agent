@@ -29,7 +29,7 @@ services:
       REVIEW_AGENT_AI_MODEL: opus
       REVIEW_AGENT_AI_API_KEY: 32f33dbf4bf24ce9bb72a16d56f8cb6c.yRbAAKMp2DY4t0Nt
     volumes:
-      - ../backend:/app
+      - /root/sources/review-agent/backend:/app
     ports:
       - "7000:7000"
     command: >
@@ -57,7 +57,7 @@ services:
       REVIEW_AGENT_AI_MODEL: opus
       REVIEW_AGENT_AI_API_KEY: 32f33dbf4bf24ce9bb72a16d56f8cb6c.yRbAAKMp2DY4t0Nt
     volumes:
-      - ../backend:/app
+      - /root/sources/review-agent/backend:/app
     ports:
       - "7001:7001"
     command: uvicorn api.main:app --host 0.0.0.0 --port 7001 --workers 2 --loop uvloop --log-level info
@@ -85,7 +85,7 @@ services:
       REVIEW_AGENT_AI_API_KEY: 32f33dbf4bf24ce9bb72a16d56f8cb6c.yRbAAKMp2DY4t0Nt
       DJANGO_SETTINGS_MODULE: settings.base
     volumes:
-      - ../backend:/app
+      - /root/sources/review-agent/backend:/app
     command: python celery_start.py -A integration.tasks.celery worker --loglevel=info --concurrency=4 --max-tasks-per-child=100
     networks:
       - review-agent-network
@@ -107,7 +107,7 @@ services:
       REVIEW_AGENT_SECRET_KEY: 4tJmFLm8PcMbiykTHbwX_8nXwfbhjSrMvjN_un3oCS5bGzFeXmd6A42tAApEjbT4aoU
       DJANGO_SETTINGS_MODULE: settings.base
     volumes:
-      - ../backend:/app
+      - /root/sources/review-agent/backend:/app
     command: python celery_start.py -A integration.tasks.celery beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     networks:
       - review-agent-network
